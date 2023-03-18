@@ -1,0 +1,75 @@
+--[[
+ * ReaScript Name: Import tracks from file after "***"
+ * About: Import tracks from a TXT, starting after "***". One track name per line.
+ * Instructions: Use to create and name new tracks in reaper, with random colours from a txt file.
+ * Author: X-Raym, adapted by ChatGPT
+ * Author URI: https://www.extremraym.com
+ * Repository: GitHub > X-Raym > REAPER-ReaScripts
+ * Repository URI: https://github.com/X-Raym/REAPER-ReaScripts
+ * Licence: GPL v3
+ * Forum Thread: Import track titles from file (eg: txt)
+ * Forum Thread URI: http://forum.cockos.com/showthread.php?p=1564559
+ * REAPER: 5.0 pre 36
+ * Version: 1.0
+]]
+
+--[[
+ * Changelog:
+ * v1.0 (2023-03-18)
+  + Initial Release
+]]
+
+--[[
+ * Dependent on having a txt file that can have anything above the list so long as the list begins with "***" as a marker for where the parse begins. 
+]]
+
+-- Define function for displaying messages in REAPER's console window
+function Msg(variable)
+  reaper.ShowConsoleMsg(tostring(variable).."\n")
+end
+
+-- Define function for reading the lines of the file and creating tracks in REAPER
+function read_lines(filepath)
+
+  reaper.Undo_BeginBlock() -- Begin undo group
+
+  local f = io.input(filepath) -- Open the file for reading
+  local skip = true -- Start by skipping lines until "***" is found
+  repeat
+
+    s = f:read ("*l") -- Read one line
+
+    if s then  -- If not end of file (EOF)
+
+      if skip and s:find("***") then -- If the line starts with "***"...
+        skip = false -- ...stop skipping lines
+      elseif not skip then -- If not skipping lines...
+        count_tracks = reaper.CountTracks(0) -- Count the number of tracks in the current REAPER project
+
+        i = 0 -- Index for the track that will be created
+
+        last_track_id = count_tracks + i -- Get the index for the last track in the project (i.e. the index of the last track + 1)
+        reaper.InsertTrackAtIndex(last_track_id, true) -- Insert a new track at the end of the project
+        last_track = reaper.GetTrack(0, last_track_id) -- Get a reference to the newly created track
+
+        retval, track_name = reaper.GetSetMediaTrackInfo_String(last_track, "P_NAME", s, true) -- Set the name of the track to the contents of the line in the file
+        reaper.SetTrackColor(last_track, reaper.ColorToNative(math.random(0,255), math.random(0,255), math.random(0,255)) ) -- Set the color of the track to a random color
+      
+      end
+
+    end
+
+  until not s  -- Until end of file
+
+  f:close() -- Close the file
+
+  reaper.Undo_EndBlock("Import tracks from file after '***'", -1) -- End undo group with custom name
+
+end
+
+-- START -----------------------------------------------------
+local retval, filetxt = reaper.GetUserFileNameForRead("", "Import tracks from file", "txt") -- Open a file picker dialog and get the path to the selected file
+
+if retval then -- If a file was selected
+
+  reaper.PreventUIRefresh
