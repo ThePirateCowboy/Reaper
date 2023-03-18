@@ -1,0 +1,111 @@
+function copyColumnToNewDoc() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var sheetName = sheet.getName();
+  var range = sheet.getRange("B2:B");
+  var values = range.getValues().filter(function(row) {
+    return row[0] !== "" && row[0] !== "________" && row[0] !== "___"+SpreadsheetApp.getActiveSheet().getName() +"_____";
+  });
+
+  if (values.length === 0) {
+    Browser.msgBox("No cells to copy");
+    return;
+  }
+
+  var folder = DriveApp.getFoldersByName("Sound Design Spotting").next();
+  var docName = sheetName + " PRINT";
+  var newDoc = DocumentApp.create(docName);
+  
+  // Add date and time to the document
+  var body = newDoc.getBody();
+  var docId = newDoc.getId();
+  var timestamp = new Date();
+  body.insertParagraph(0, "This document was created on: ").appendText(timestamp.toLocaleString());
+  
+  // Add the document ID in bold with prompt to insert in Reaper function
+  
+var url = "https://github.com/ThePirateCowboy/Reaper/blob/28dd2b3081bde0e86a06584b2faa4be9449f3f76/Rename%20tracks%20based%20on%20Txt%20file%20after%20marker.lua";
+body.appendParagraph("Here is a link to the custom reaper script: ")
+  .setBold(true)
+  .appendText("Click here")
+  .setLinkUrl(url)
+  .setBold(false)
+  .setItalic(true)
+  .appendText(" (if needed)");
+
+  //body.appendParagraph( "\nHere is a link to the custom function script if you need it: ").setBold(true).appendText("https://github.com/ThePirateCowboy/Reaper/blob/28dd2b3081bde0e86a06584b2faa4be9449f3f76/Rename%20tracks%20based%20on%20Txt%20file%20after%20marker.lua").setBold(false).setItalic(true).appendText("(if needed)");
+  
+  
+
+  body.appendParagraph("\nCopied " + values.length + " cells from " + sheetName + " sheet:\n\n***").setBold(true);
+  for (var i = 0; i < values.length; i++) {
+    body.appendParagraph(values[i][0]).setBold(false);
+  }
+
+  folder.addFile(DriveApp.getFileById(newDoc.getId()));
+  newDoc.saveAndClose();
+
+  var url = "https://docs.google.com/document/d/" + newDoc.getId();
+  var html = "<script>window.open('" + url + "');google.script.host.close();</script>";
+  var userInterface = HtmlService.createHtmlOutput(html);
+  SpreadsheetApp.getUi().showModalDialog(userInterface, 'File Created');
+}
+
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+    //var sheet = SpreadsheetApp.getActiveSpreadsheet();
+  
+
+
+  
+  
+
+  ui.createMenu('New Spotting List')
+      .addItem('Duplicate Sheet', 'duplicateSheet')
+      .addToUi();
+
+      // Show a personalized message to the user
+  var message = "Welcome to the Sound Design Spotting sheet! \n\nThis sheet is designed to assist you in organizing and tracking sound design for your projects, adhering to UCS standards.\n\nTo create a new spotting list, please select 'New Spotting List' from the top menu bar and choose 'Duplicate Sheet', rather than duplicating from the sheets tab at the bottom of the page.\n\nIf you have any questions or require assistance, please don't hesitate to contact us at info@papermountain.games.";
+  //sheet.toast(message, "Welcome", 10);
+  ui.alert(message);
+  
+  
+}
+
+
+function duplicateSheet() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var sheetName = sheet.getName();
+  
+  // Prompt the user to input a name for the new sheet
+  var ui = SpreadsheetApp.getUi();
+  var newName = ui.prompt("The name of the project: (Keep it as brief as possible!)", ui.ButtonSet.OK_CANCEL);
+  if (newName.getSelectedButton() == ui.Button.OK) {
+    // Check if the new name contains an underscore character
+    if (newName.getResponseText().indexOf("_") !== -1) {
+      ui.alert("Sheet name cannot contain an underscore character (_). Please try again.");
+      return;
+    }
+    
+    var newSheetName = newName.getResponseText();
+    newSheetName = newSheetName;
+
+    // Show a popup notification reminding the user of a specific thing about the naming conventions
+    ui.alert("The Source ID has been set to the name of this Sheet. If you need to change the SourceID, please change the name of this sheet. ");
+
+    var newSheet = sheet.copyTo(sheet.getParent()).setName(newSheetName);
+    
+    // Make the new sheet active
+    SpreadsheetApp.setActiveSheet(newSheet);
+    updateSheetName();
+  }
+}
+function updateSheetName() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var sheetName = sheet.getName();
+  var range = sheet.getRange("P2");
+  range.setValue(sheetName);
+}
+
+
